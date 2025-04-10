@@ -4,16 +4,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>World Head Football</title>
-    <link rel="shortcut icon" href="./Sprites/Ball 02.png" type="image/x-icon">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     
+    <div id="menuContainer">
+        <h1>World Head Football</h1>
+        <input type="text" id="usernameInput" placeholder="Enter Username">
+        <select name="selectLevel" id="selectLevel">
+            <option value="0" selected disabled>Select Level</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+        </select>
+
+        <div class="ball-container">
+            <div class="ball-1">
+                <img src="./Sprites/Ball 01.png" alt="" width="100">
+                <input type="radio" name="selectBall" id="selectBall1">
+            </div>
+            <div class="ball-2">
+                <img src="./Sprites/Ball 02.png" alt="" width="100">
+                <input type="radio" name="selectBall" id="selectBall2">
+            </div>
+        </div>
+
+        <div class="player-container">
+            <select name="selectPlayer1" id="selectPlayer1">
+                <option value="0" selected disabled>Select Country for Player 1</option>
+                <option value="1">Brazil</option>
+                <option value="2">England</option>
+                <option value="3">Spain</option>
+                <option value="4">Japan</option>
+                <option value="5">Netherlands</option>
+                <option value="6">Portugal</option>
+                <option value="7">Germany</option>
+                <option value="8">Italy</option>
+            </select>
+
+            <select name="selectPlayer2" id="selectPlayer2">
+                <option value="0" selected disabled>Select Country for Player 2</option>
+                <option value="1">Brazil</option>
+                <option value="2">England</option>
+                <option value="3">Spain</option>
+                <option value="4">Japan</option>
+                <option value="5">Netherlands</option>
+                <option value="6">Portugal</option>
+                <option value="7">Germany</option>
+                <option value="8">Italy</option>
+            </select>
+        </div>
+
+        <div class="menu-buttons">
+            <button id="startBtn">Play Game</button>
+            <button id="instructionBtn">Instruction</button>
+        </div>
+
+    </div>
+
+    <div id="instructionMenu">
+        <div class="instruction-content">
+            <h1>Game Instructions</h1>
+            <ol>
+                <li>Enter username, select level, select ball skin, and select country for each player</li>
+                <li>Play against each other, and score goals</li>
+                <li>Pick power up to use for your advantage</li>
+                <li>Whoever has the most goals after the timer run out, is the winner</li>
+                <li>Enjoy!</li>
+            </ol>
+        </div>
+        <div id="closeInstructionBtn" class="close-instruction">X</div>
+    </div>
+
     <div id="gameContainer">
         <canvas id="canvas"></canvas>
     </div>
 
-    <script src="image.js"></script>
+    <script src="menu.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

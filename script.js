@@ -1,242 +1,422 @@
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+// canvas
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
 
 canvas.width = 1000;
 canvas.height = 600;
 
-const PLAYER_GRAVITY = 0.5;
-const BALL_GRAVITY = 0.4;
-const BALL_BOUNCE = -9; // Bounce height
+// game
 
-let frameIndex = 0;
-let selectedCharacter = "Character 01 - Brazil"; // Default character
-let currentAnimation = characters[selectedCharacter].idle;
+// loading images
+const bgImage1 = new Image();
+bgImage1.src = './Sprites/background1.jpg';
 
-function drawBackground(index) {
-    let bg = backgroundImages[index];
-    if (!bg || !bg.complete) return;
+const ballImages = {
+    ball1: new Image(),
+    ball2: new Image()
+};
 
-    ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
-}
+ballImages.ball1.src = './Sprites/Ball 01.png';
+ballImages.ball2.src = './Sprites/Ball 02.png';
 
-const players = [
-    {
-        x: 100,
-        y: 360,
-        width: 160,
-        height: 160,
-        vx: 0,
-        vy: 0,
-        speed: 5,
-        jumpPower: -15,
-        isJumping: false, // Track if in air
-        controls: { left: 'a', right: 'd', jump: 'w' }, // Player 2 uses A & D
-        currentAnimation: characters["Character 01 - Brazil"].idle, // Animation frames
-        frameIndex: 0,
-        lastFrameTime: 0,
-        name: 'Character 01 - Brazil'
-    },
-    {
-        x: 300,
-        y: 360,
-        width: 160,
-        height: 160,
-        vx: 0,
-        speed: 5,
-        jumpPower: -15,
-        isJumping: false, // Track if in air
-        controls: { left: 'ArrowLeft', right: 'ArrowRight', jump: 'ArrowUp' },
-        currentAnimation: [], // Animation frames
-        frameIndex: 0,
-        lastFrameTime: 0,
-        name: 'Character 02 - England'
-    }
+let selectedBallImage = ballImages.ball1;
+
+const characterNames = [
+    'Character 01 - Brazil',
+    'Character 02 - England',
+    'Character 03 - Spain',
+    'Character 04 - Japan',
+    'Character 05 - Netherlands',
+    'Character 06 - Portugal',
+    'Character 07 - Germany',
+    'Character 08 - Italy'
 ];
 
-const keys = {};
+const animationTypes = [
+    'Idle',
+    'Jump',
+    'Kick',
+    'Move Backward',
+    'Move Forward',
+    'Falling Down'
+];
 
-// Handle key presses
-window.addEventListener('keydown', (event) => {
-    keys[event.key] = true;
-});
+const frameCounts = {
+    'Idle': 18,
+    'Kick': 9,
+    'Falling Down': 5,
+    'Jump': 5,
+    'Move Backward': 10,
+    'Move Forward': 10
+}
 
-window.addEventListener('keyup', (event) => {
-    keys[event.key] = false;
-});
+// ball initialization
+const ball = {
+    x: canvas.width / 2 - 40,
+    y: 300,
+    width: 70,
+    height: 70,
+    velocityX: 0,
+    velocityY: 0,
+    gravity: 0.5,
+    bounce: 0.7,
+    groundY: 490,
+    image: selectedBallImage
+};
 
-// Update movement for all players
-function updateMovement() {
-    for (let i = 0; i < players.length; i++) {
-        let player = players[i];
 
-        // Horizontal Movement
-        if (keys[player.controls.left]) {
-            player.vx = -player.speed;
-            if (!player.isJumping) {
-                player.currentAnimation = (i === 1) ? characters[player.name].moveForward : characters[player.name].moveBackward;
-            }
-        } else if (keys[player.controls.right]) {
-            player.vx = player.speed;
-            if (!player.isJumping) {
-                player.currentAnimation = (i === 1) ? characters[player.name].moveBackward : characters[player.name].moveForward;
-            }
-        } else {
-            player.vx = 0;
+// ball functions
+
+function checkBallCollision(player, ball) {
+    const playerWidth = 100;
+    const playerHeight = 150;
+
+    return (
+        player.x < ball.x + ball.width - 50 &&
+        player.x + playerWidth + 25> ball.x &&
+        player.y < ball.y + ball.height &&
+        player.y + playerHeight > ball.y
+    );
+}
+
+
+function bounceBallFromPlayer(player) {
+    const ballLeft = ball.x;
+    const ballRight = ball.x + ball.width;
+    const ballTop = ball.y;
+    const ballBottom = ball.y + ball.height;
+
+    const playerLeft = player.x;
+    const playerRight = player.x + player.width;
+    const playerTop = player.y;
+    const playerBottom = player.y + player.height;
+
+    const isColliding = (
+        ballRight > playerLeft &&
+        ballLeft < playerRight &&
+        ballBottom > playerTop &&
+        ballTop < playerBottom
+    );
+
+    if (isColliding) {
+        const playerCenterX = player.x + player.width / 2;
+        const ballCenterX = ball.x + ball.width / 2;
+        const offset = (ballCenterX - playerCenterX) / (player.width / 2);
+
+        let forceX = offset * 6 + (player.velocityX || 0) * 0.5;
+        let forceY = -Math.abs(ball.velocityY || 6) * 1.1;
+
+        // 👟 Kick detection
+        const KICK_ZONE = 100;
+        const facingRight = player.velocityX >= 0;
+
+        const kickLeft = facingRight
+            ? playerRight
+            : playerLeft - KICK_ZONE;
+
+        const kickRight = facingRight
+            ? playerRight + KICK_ZONE
+            : playerLeft;
+
+        const ballCenter = ball.x + ball.width / 2;
+        const inKickZone = ballCenter >= kickLeft && ballCenter <= kickRight;
+
+        if (player.isKicking && inKickZone) {
+            forceX = facingRight ? 12 : -12;
+            forceY = -25;
         }
 
-        // Jumping
-        if (keys[player.controls.jump] && !player.isJumping) {
-            player.vy = player.jumpPower;
-            player.isJumping = true;
-            player.currentAnimation = characters[player.name].jump;
-        }
-
-        if (player.y < player.vy + player.jumpPower + 160) {
-            player.currentAnimation = characters[player.name].fall;
-        }
-
-        // Apply PLAYER_GRAVITY
-        player.vy += PLAYER_GRAVITY;
-        player.y += player.vy;
-
-        // Ground Collision
-        if (player.y >= 360) {
-            player.y = 360;
-            player.vy = 0;
-            player.isJumping = false;
-            if (player.vx === 0) {
-                player.currentAnimation = characters[player.name].idle;
-            }
-        }
-
-        // Apply movement
-        player.x += player.vx;
+        ball.velocityX = forceX;
+        ball.velocityY = forceY;
     }
 }
 
-const ball_obj = {
-    x: (canvas.width / 2) - 35,
-    y: 100,
-    radius: 10,
-    width: 65,
-    height: 65,
-    vx: 0, // Ball's horizontal velocity
-    vy: 0, // Ball's vertical velocity
-    
+
+// characters initialization
+const characters = {};
+
+let totalToLoad = 0;
+let loadedCount = 0;
+
+for (const characterName of characterNames) {
+    characters[characterName] = {};
+
+    for (const animationName of animationTypes) {
+        characters[characterName][animationName] = [];
+
+        const frameCount = frameCounts[animationName];
+
+        for (let i = 0; i < frameCount; i++) {
+            const img = new Image();
+
+            const frameName = `${animationName}_${i.toString().padStart(3, '0')}.png`;
+            const path = `./Sprites/Characters/${characterName}/${animationName}/${frameName}`;
+
+            img.src = path;
+
+            img.onload = () => {
+                loadedCount++;
+                if (loadedCount === totalToLoad) {
+                    console.log('all images loaded!');
+                }
+            }
+
+            characters[characterName][animationName].push(img);
+            totalToLoad++;
+        }
+    }
 }
 
-function updateBall() {
-    // Apply gravity
-    ball_obj.vy += BALL_GRAVITY;
+// characters animation & state
+let animationSpeed = 50;
+
+const player1 = {
+    character: 'Character 01 - Brazil',
+    x: 200,
+    y: 350,
+    width: 100,
+    height: 150,
+    animation: 'Idle',
+    frame: 0,
+    lastFrameTime: 0,
+    groundY: 350,
+    velocityY: 0,
+    isJumping: false,
+    isKicking: false,
+};
+
+const player2 = {
+    character: 'Character 02 - England',
+    x: 620,
+    y: 350,
+    width: 100,
+    height: 150,
+    animation: 'Idle',
+    frame: 0,
+    lastFrameTime: 0,
+    groundY: 350,
+    velocityY: 0,
+    isJumping: false,
+    isKicking: false,
+};
+
+function setAnimation(player, animationName) {
+    if (player.animation !== animationName) {
+        player.animation = animationName;
+        player.frame = 0;
+        player.lastFrameTime = 0;
+    }
+}
+
+
+// draw background
+function drawBackground() {
+    if (!bgImage1.complete) return;
+
+    ctx.drawImage(bgImage1, 0, 0, canvas.width, canvas.height);
+}
+
+// draw ball
+function drawBall() {
+
+    // Gravity
+    ball.velocityY += 0.4; // Gravity strength
 
     // Update position
-    ball_obj.x += ball_obj.vx;
-    ball_obj.y += ball_obj.vy;
+    ball.x += ball.velocityX;
+    ball.y += ball.velocityY;
 
-    // Floor Collision (Bounce properly)
-    if (ball_obj.y + ball_obj.radius >= 440) {
-        ball_obj.y = 440 - ball_obj.radius;
-        ball_obj.vy *= -0.85; // Retain energy for realistic bouncing
+    // Floor bounce
+    const floor = 425;
+    if (ball.y > floor) {
+        ball.y = floor;
+        ball.velocityY *= -0.8; // Lose some energy when hitting ground
 
-        if (Math.abs(ball_obj.vy) < 2) {
-            ball_obj.vy = 0; // Stop unnecessary bouncing
+        // Friction on ground
+        ball.velocityX *= 0.9;
+
+        // Stop bouncing if it's small enough
+        if (Math.abs(ball.velocityY) < 1) {
+            ball.velocityY = 0; // Let it stay bouncy forever
         }
-
-        // Apply ground friction
-        ball_obj.vx *= 0.9;
     }
 
-    // Wall Collision (Left & Right)
-    if (ball_obj.x - ball_obj.radius <= 0 || ball_obj.x + ball_obj.radius >= canvas.width) {
-        ball_obj.vx *= -1; // Reverse direction
+    // Left/right wall bounce
+    if (ball.x < 0) {
+        ball.x = 0;
+        ball.velocityX *= -0.9;
+    } else if (ball.x + ball.width > canvas.width) {
+        ball.x = canvas.width - ball.width;
+        ball.velocityX *= -0.9;
     }
 
-    // **Player Collision**
-    for (let player of players) {
-        let isColliding =
-            ball_obj.x + ball_obj.radius > player.x &&
-            ball_obj.x - ball_obj.radius < player.x + player.width &&
-            ball_obj.y + ball_obj.radius > player.y &&
-            ball_obj.y - ball_obj.radius < player.y + player.height;
+    ctx.drawImage(ball.image, ball.x, ball.y, ball.width, ball.height);
+}
 
-        if (isColliding) {
-            let isAbove =
-                player.y + player.height >= ball_obj.y - ball_obj.radius &&
-                player.y + player.height <= ball_obj.y - ball_obj.radius + 10; // Small margin for standing detection
 
-            if (isAbove) {
-                ball_obj.vy = -9; // Stronger bounce when player lands on it
+// draw players
+
+function drawPlayer(player, timestamp) {
+    const frames = characters[player.character][player.animation];
+
+    if (timestamp - player.lastFrameTime > animationSpeed) {
+        player.lastFrameTime = timestamp;
+
+        player.frame++;
+
+        if (player.frame >= frames.length) {
+            if (player.animation === 'Kick') {
+                setAnimation(player, 'Idle');
             } else {
-                let impactAngle = (ball_obj.x - (player.x + player.width / 2)) / (player.width / 2);
-                ball_obj.vx = impactAngle * 5; // Rebound horizontally
-                ball_obj.vy = -Math.abs(ball_obj.vy) * 1.05; // Increase bounce height slightly
+                player.frame = 0;
             }
         }
     }
-}
 
+    const frameImage = frames[player.frame];
 
+    const shouldFlip = player === player2;
+    const imgWidth = 170;
+    const imgHeight = 170;
 
+    ctx.save();
 
-
-
-
-
-
-const frameInterval = 50;
-let lastFrameTime = 0;
-
-function drawCharacters(timestamp) {
-    for (let i = 0; i < players.length; i++) {
-        let player = players[i];
-
-        if (!player.currentAnimation.length) continue; // Skip if no animation
-
-        let img = player.currentAnimation[player.frameIndex % player.currentAnimation.length];
-        if (!img.complete) continue; // Ensure image is loaded
-
-        // Control animation speed
-        if (timestamp - player.lastFrameTime >= frameInterval) {
-            player.frameIndex = (player.frameIndex + 1) % player.currentAnimation.length;
-            player.lastFrameTime = timestamp;
-        }
-
-        ctx.save(); // Save canvas state
-
-        if (i === 1) { // Player 2 needs to be flipped
-            ctx.translate(player.x + player.width, player.y); // Move origin to Player 2's right edge
-            ctx.scale(-1, 1); // Flip horizontally
-            ctx.drawImage(img, -900, 360, player.width, player.height); // Draw at new flipped origin
-        } else { // Normal drawing for Player 1
-            ctx.drawImage(img, player.x, player.y, player.width, player.height);
-        }
-
-        ctx.restore(); // Restore canvas state
+    if (shouldFlip) {
+        ctx.translate(player.x + imgWidth, player.y);
+        ctx.scale(-1, 1);
+        ctx.drawImage(frameImage, 0, 0, imgWidth, imgHeight);
+    } else {
+        ctx.drawImage(frameImage, player.x, player.y, imgWidth, imgHeight);
     }
+
+    ctx.restore();
+
+    // ctx.fillstyle = 'red';
+    // ctx.fillRect(player.x, player.y, 170, 170);
+
 }
 
+// event listeners
 
+// player movement
+const keys = {};
 
+window.addEventListener('keydown', e => {
+    keys[e.key] = true;
 
+    // Jump
+    if (e.key === 'w' && !player1.isJumping) {
+        player1.velocityY = -12;
+        player1.isJumping = true;
+        setAnimation(player1, 'Jump');
+    }
 
-function drawBalls(index) {
-    let ballImg = ballImages[index];
-    if (!ballImg || !ballImg.complete) return;
+    if (e.key === 'ArrowUp' && !player2.isJumping) {
+        player2.velocityY = -12;
+        player2.isJumping = true;
+        setAnimation(player2, 'Jump');
+    }
 
-    ctx.drawImage(ballImg, ball_obj.x, ball_obj.y, 65, 65);
-}
+    // Kick
+    if (e.key === ' ') {
+        setAnimation(player1, 'Kick');
+        if (!player1.isKicking) {
+            player1.isKicking = true;
 
+            // Optional: play kick animation/sound here
 
-function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear frame
+            // Reset after short delay
+            setTimeout(() => {
+                player1.isKicking = false;
+            }, 200); // Kick lasts 200ms
+        }
+    }
+
+    if (e.key === 'Enter') {
+        setAnimation(player2, 'Kick');
+        if (!player2.isKicking) {
+            player2.isKicking = true;
+
+            // Optional: play kick animation/sound here
+
+            // Reset after short delay
+            setTimeout(() => {
+                player2.isKicking = false;
+            }, 200); // Kick lasts 200ms
+        }
+    }
+
+});
+
+window.addEventListener('keyup', e => {
+    keys[e.key] = false;
+});
+
+function updatePlayer(player, leftKey, rightKey, isFlipped = false) {
+    if (keys[leftKey]) {
+        player.x -= 5;
+
+        if (!player.isJumping) {
+            setAnimation(player, isFlipped ? 'Move Forward' : 'Move Backward');
+        }
+    } else if (keys[rightKey]) {
+        player.x += 5;
+
+        if (!player.isJumping) {
+            setAnimation(player, isFlipped ? 'Move Backward' : 'Move Forward');
+        }
+    } else if (!player.isJumping && !player.animation.startsWith('Kick')) {
+        setAnimation(player, 'Idle');
+    }
+
+    // Gravity
+    if (player.isJumping) {
+        player.y += player.velocityY;
+        player.velocityY += 0.5;
+
+        if (player.velocityY > 0 && player.animation !== 'Falling Down') {
+            setAnimation(player, 'Falling Down');
+        }
     
-    drawBackground(1);
-    updateMovement();
-    updateBall();
-    drawCharacters(performance.now());
-    drawBalls(1);
-
-    requestAnimationFrame(animate); // Loop
+        if (player.y >= player.groundY) {
+            player.y = player.groundY;
+            player.velocityY = 0;
+            player.isJumping = false;
+            setAnimation(player, 'Idle');
+        }
+    }
+    
 }
 
-animate();
+
+// game loop
+
+function gameLoop(timestamp) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    updatePlayer(player1, 'a', 'd');
+    updatePlayer(player2, 'ArrowLeft', 'ArrowRight', true);
+
+    drawBackground();
+    drawPlayer(player1, timestamp);
+    drawPlayer(player2, timestamp);
+
+    // Check collision and push only if touched
+    if (checkBallCollision(player1, ball)) {
+        bounceBallFromPlayer(player1);
+    }
+
+    if (checkBallCollision(player2, ball)) {
+        bounceBallFromPlayer(player2);
+    }
+
+    drawBall();
+
+    
+
+    requestAnimationFrame(gameLoop);
+}
+
+function gameStart() {
+    gameLoop();
+}

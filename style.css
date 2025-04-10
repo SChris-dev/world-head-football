@@ -1,14 +1,81 @@
 body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
     margin: 0;
     padding: 0;
     width: 100vw;
     height: 100vh;
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: rgb(0, 40, 101);
+    color: white;
+}
+
+#gameContainer {
+    display: none;
+}
+
+#instructionMenu {
+    display: none;
+    padding: 50px;
+    background-color: rgb(0, 0, 0, 0.5);
+    margin-left: 50px;
+    height: 350px;
+    align-items: start;
+}
+
+#closeInstructionBtn {
+    color: white;
+    background-color: red;
+    padding: 10px 15px;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 100%;
+}
+
+/* menu container */
+#menuContainer {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    border: 1px solid white;
+    text-align: center;
+    gap: 20px;
+}
+
+#menuContainer input {
+    padding: 5px;
+}
+
+.ball-container {
     display: flex;
     justify-content: center;
-    align-items: center;
-    background-color: rgb(26, 26, 26);
+    gap: 20px;
 }
-/* 
-canvas {
+
+.ball-container .ball-1 {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.ball-container .ball-2 {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.menu-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+}
+
+.menu-buttons button {
+    padding: 10px 20px;
+    cursor: pointer;
+}
+
+/* game */
+canvas { 
     border: 1px solid white;
-} */
+}
