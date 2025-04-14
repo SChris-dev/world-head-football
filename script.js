@@ -11,6 +11,9 @@ canvas.height = 600;
 const bgImage1 = new Image();
 bgImage1.src = './Sprites/background1.jpg';
 
+const goalImg = new Image();
+goalImg.src = './Sprites/Goal - Side.png';
+
 const ballImages = {
     ball1: new Image(),
     ball2: new Image()
@@ -216,6 +219,89 @@ function drawBackground() {
     ctx.drawImage(bgImage1, 0, 0, canvas.width, canvas.height);
 }
 
+// goal function
+
+let score = {
+    left: 0,
+    right: 0
+};
+
+function scoreGoal(whoScored) {
+    score[whoScored]++;
+
+    ball.x = canvas.width / 2 - ball.width / 2;
+    ball.y = 100;
+    ball.velocityX = 0;
+    ball.velocityY = -5;
+
+}
+
+
+function checkGoal() {
+    const goalHeight = 250;
+    const goalWidth = 150;
+    const ballCenterX = ball.x + ball.width / 2;
+    const ballCenterY = ball.y + ball.height / 2;
+
+    const inGoalY = ballCenterY > canvas.height - goalHeight;
+
+    if (inGoalY) {
+        // Left Goal
+        if (ballCenterX < goalWidth) {
+            scoreGoal('right');
+            console.log(score);
+        }
+
+        // Right Goal
+        if (ballCenterX > canvas.width - goalWidth) {
+            scoreGoal('left');
+            console.log(score);
+
+        }
+    }
+}
+
+function checkGoalCollision() {
+    const goalTop = canvas.height - 350;
+    const goalWidth = 150;
+    // const goalHeight = 250;
+
+    if (
+        ball.x + ball.width > 0 &&
+        ball.x < goalWidth &&
+        ball.y + ball.height > goalTop &&
+        ball.y < goalTop + 10
+    ) {
+        ball.y = goalTop - ball.height;
+        ball.velocityY *= -ball.bounce;
+    }
+
+    if (
+        ball.x + ball.width > canvas.width - goalWidth &&
+        ball.x < canvas.width &&
+        ball.y + ball.height > goalTop &&
+        ball.y < goalTop + 10
+    ) {
+        ball.y = goalTop - ball.height;
+        ball.velocityY *= -ball.bounce;
+    }
+}
+
+
+
+// draw goal
+function drawGoals() {
+    ctx.drawImage(goalImg, 0, 250, 150, 250);
+
+    ctx.save();
+
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(goalImg, 0, 250, 150, 250);
+
+    ctx.restore();
+}
+
 // draw ball
 function drawBall() {
 
@@ -411,6 +497,9 @@ function gameLoop(timestamp) {
     }
 
     drawBall();
+    drawGoals();
+    checkGoal();
+    checkGoalCollision();
 
     
 
